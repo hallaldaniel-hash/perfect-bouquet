@@ -126,7 +126,7 @@ export default function BouquetBuilder() {
     context.ellipse(512, 775, 112, 30, -.06, 0, Math.PI * 2);
     context.stroke();
 
-    return canvas.toDataURL("image/jpeg", .9);
+    return canvas.toDataURL("image/jpeg", .8);
   }
 
   function toggleFlower(index: number) {
@@ -166,13 +166,33 @@ export default function BouquetBuilder() {
           referenceImage,
         }),
       });
-      const data = await response.json();
-
-      if (!response.ok || typeof data.image !== "string") {
-        throw new Error(data.error || "The bouquet could not be generated.");
+      if (!response.ok) {
+        const rawError = await response.text();
+        let message = "The flowers need another moment to bloom. Please try again.";
+        try {
+          const parsed = JSON.parse(rawError) as { error?: unknown };
+          if (typeof parsed.error === "string") message = parsed.error;
+        } catch {
+          if (response.status === 504) {
+            message = "The bouquet took too long to bloom. Please press the button once more.";
+          }
+        }
+        throw new Error(message);
       }
 
-      setGeneratedImage(data.image);
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.startsWith("image/")) {
+        throw new Error("The image studio returned an unexpected result. Please try again.");
+      }
+
+      const imageBlob = await response.blob();
+      if (imageBlob.size === 0) {
+        throw new Error("The bouquet image arrived empty. Please try again.");
+      }
+
+      const imageUrl = URL.createObjectURL(imageBlob);
+      if (generatedImage?.startsWith("blob:")) URL.revokeObjectURL(generatedImage);
+      setGeneratedImage(imageUrl);
       setGenerated(true);
       window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch (error) {

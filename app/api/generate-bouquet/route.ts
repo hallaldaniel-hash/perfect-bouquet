@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const recentRequests = new Map<string, number>();
 const ALLOWED_FLOWERS = new Set([
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
     form.append("prompt", prompt);
     form.append("width", "1024");
     form.append("height", "1024");
-    form.append("steps", "12");
+    form.append("steps", "8");
     form.append("input_image", new Blob([referenceBytes], { type: "image/jpeg" }), "bouquet-blueprint.jpg");
 
     const cloudflareResponse = await fetch(
@@ -163,7 +163,26 @@ export async function POST(request: NextRequest) {
       },
     );
 
-    const cloudflareData = await cloudflareResponse.json();
+    const cloudflareRaw = await cloudflareResponse.text();
+    let cloudflareData: {
+      result?: { image?: unknown };
+      errors?: unknown;
+    } = {};
+
+    try {
+      cloudflareData = JSON.parse(cloudflareRaw);
+    } catch {
+      console.error(
+        "Cloudflare returned a non-JSON response",
+        cloudflareResponse.status,
+        cloudflareRaw.slice(0, 300),
+      );
+      return NextResponse.json(
+        { error: "The image studio did not answer correctly. Please try once more." },
+        { status: 502 },
+      );
+    }
+
     const image = cloudflareData?.result?.image;
 
     if (!cloudflareResponse.ok || typeof image !== "string") {
@@ -174,10 +193,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      { image: `data:image/jpeg;base64,${image}` },
-      { headers: { "Cache-Control": "no-store" } },
-    );
+    const cleanImage = image.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "");
+    const imageBytes = Buffer.from(cleanImage, "base64");
+
+    if (imageBytes.length === 0 || imageBytes.length > 4_300_000) {
+      console.error("Generated bouquet image was outside the safe response size", imageBytes.length);
+      return NextResponse.json(
+        { error: "The bouquet image was too large to deliver. Please try once more." },
+        { status: 502 },
+      );
+    }
+
+    return new Response(new Uint8Array(imageBytes), {
+      status: 200,
+      headers: {
+        "Content-Type": "image/jpeg",
+        "Content-Length": String(imageBytes.length),
+        "Cache-Control": "no-store",
+      },
+    });
   } catch (error) {
     console.error("Bouquet generation error", error);
     return NextResponse.json(
