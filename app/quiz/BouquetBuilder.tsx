@@ -1,6 +1,6 @@
 "use client";
 
-import { CSSProperties, useMemo, useRef, useState } from "react";
+import { CSSProperties, useRef, useState } from "react";
 
 const flowers = [
   { name: "Garden Rose", meaning: "devotion", position: "0% 0%" },
@@ -28,44 +28,15 @@ const wraps = [
   { name: "Midnight", color: "#28333a" },
 ];
 
-type BloomStyle = CSSProperties & {
-  "--x": string;
-  "--y": string;
-  "--size": string;
-  "--delay": string;
-  "--flower-position": string;
-  "--rotation": string;
-};
-
 export default function BouquetBuilder() {
   const [count, setCount] = useState(15);
   const [selectedFlowers, setSelectedFlowers] = useState([0, 1, 4]);
   const [selectedWraps, setSelectedWraps] = useState([0]);
   const [generated, setGenerated] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState("");
   const resultRef = useRef<HTMLElement>(null);
-
-  const bouquetBlooms = useMemo(() => {
-    return Array.from({ length: count }, (_, index) => {
-      const angle = index * 137.5 * (Math.PI / 180);
-      const radius = 7.2 * Math.sqrt(index);
-      const x = 50 + Math.cos(angle) * radius;
-      const y = 43 + Math.sin(angle) * radius * 0.72;
-      const flowerIndex = selectedFlowers[index % selectedFlowers.length];
-      const size = 66 + ((index * 17) % 36);
-      return {
-        id: `${index}-${flowerIndex}`,
-        flower: flowers[flowerIndex],
-        style: {
-          "--x": `${x}%`,
-          "--y": `${y}%`,
-          "--size": `${size}px`,
-          "--delay": `${Math.min(index * 0.035, .75)}s`,
-          "--flower-position": flowers[flowerIndex].position,
-          "--rotation": `${(index * 29) % 24 - 12}deg`,
-        } as BloomStyle,
-      };
-    });
-  }, [count, selectedFlowers]);
 
   function toggleFlower(index: number) {
     setGenerated(false);
@@ -87,13 +58,36 @@ export default function BouquetBuilder() {
     });
   }
 
-  function generateBouquet() {
-    setGenerated(true);
-    window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 80);
-  }
+  async function generateBouquet() {
+    setGenerating(true);
+    setGenerationError("");
+    setGenerated(false);
 
-  const wrapOne = wraps[selectedWraps[0]];
-  const wrapTwo = wraps[selectedWraps[1] ?? selectedWraps[0]];
+    try {
+      const response = await fetch("/api/generate-bouquet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          count,
+          flowers: selectedFlowers.map((index) => flowers[index].name),
+          wraps: selectedWraps.map((index) => wraps[index].name),
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || typeof data.image !== "string") {
+        throw new Error(data.error || "The bouquet could not be generated.");
+      }
+
+      setGeneratedImage(data.image);
+      setGenerated(true);
+      window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : "The flowers need another moment. Please try again.");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   return (
     <main className="builder-page">
@@ -192,29 +186,25 @@ export default function BouquetBuilder() {
       </section>
 
       <div className="generate-row">
-        <p>{count} blooms · {selectedFlowers.length} flower types · {selectedWraps.length} wrap {selectedWraps.length === 1 ? "color" : "colors"}</p>
-        <button type="button" className="generate-button" onClick={generateBouquet}>
-          <span>Make my bouquet</span><b aria-hidden="true">✿</b>
+        <div>
+          <p>{count} blooms · {selectedFlowers.length} flower types · {selectedWraps.length} wrap {selectedWraps.length === 1 ? "color" : "colors"}</p>
+          {generationError && <p className="generation-error" role="alert">{generationError}</p>}
+        </div>
+        <button type="button" className="generate-button" onClick={generateBouquet} disabled={generating}>
+          <span>{generating ? "Growing your bouquet…" : "Make my bouquet"}</span><b aria-hidden="true">{generating ? "···" : "✿"}</b>
         </button>
       </div>
 
-      {generated && (
+      {generated && generatedImage && (
         <section className="bouquet-result" ref={resultRef} aria-live="polite">
           <div className="result-title">
             <span>made especially for Dashunya</span>
             <h2>Your bouquet is ready.</h2>
           </div>
           <div className="result-layout">
-            <div className="created-bouquet" style={{ "--wrap-one": wrapOne.color, "--wrap-two": wrapTwo.color } as CSSProperties}>
-              <div className="wrap-back" />
-              <div className="leaf leaf-one" /><div className="leaf leaf-two" /><div className="leaf leaf-three" />
-              <div className="bloom-field">
-                {bouquetBlooms.map(({ id, flower, style }) => (
-                  <span key={id} className="bouquet-bloom" style={style} title={flower.name} />
-                ))}
-              </div>
-              <div className="wrap-front" />
-              <div className="bouquet-ribbon"><span /></div>
+            <div className="ai-bouquet-frame">
+              <img src={generatedImage} alt={`A custom ${count}-flower anniversary bouquet`} />
+              <span className="ai-bouquet-label">your one-of-a-kind bouquet</span>
             </div>
 
             <article className="love-note">
@@ -229,7 +219,7 @@ export default function BouquetBuilder() {
               <p className="signature">Yours truly,<br /><em>Daniel</em> <span>♥</span></p>
             </article>
           </div>
-          <button className="edit-button" type="button" onClick={() => { setGenerated(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+          <button className="edit-button" type="button" onClick={() => { setGenerated(false); setGeneratedImage(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
             Change a few petals
           </button>
         </section>
