@@ -38,6 +38,97 @@ export default function BouquetBuilder() {
   const [generationError, setGenerationError] = useState("");
   const resultRef = useRef<HTMLElement>(null);
 
+  function loadFlowerAtlas() {
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("The flower reference could not be loaded."));
+      image.src = "/flower-selector-atlas.png";
+    });
+  }
+
+  async function buildReferenceImage() {
+    const atlas = await loadFlowerAtlas();
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("The bouquet reference could not be prepared.");
+
+    context.fillStyle = "#f4efe5";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    const firstWrap = wraps[selectedWraps[0]].color;
+    const secondWrap = wraps[selectedWraps[1] ?? selectedWraps[0]].color;
+
+    context.beginPath();
+    context.moveTo(225, 585);
+    context.lineTo(799, 585);
+    context.lineTo(650, 975);
+    context.lineTo(374, 975);
+    context.closePath();
+    context.fillStyle = secondWrap;
+    context.fill();
+
+    context.beginPath();
+    context.moveTo(295, 610);
+    context.lineTo(729, 610);
+    context.lineTo(620, 920);
+    context.lineTo(404, 920);
+    context.closePath();
+    context.fillStyle = firstWrap;
+    context.fill();
+
+    const exactFlowerList = Array.from({ length: count }, (_, index) => {
+      const base = Math.floor(count / selectedFlowers.length);
+      const remainder = count % selectedFlowers.length;
+      let cursor = 0;
+      for (let selectionIndex = 0; selectionIndex < selectedFlowers.length; selectionIndex += 1) {
+        const allocation = base + (selectionIndex < remainder ? 1 : 0);
+        if (index < cursor + allocation) return selectedFlowers[selectionIndex];
+        cursor += allocation;
+      }
+      return selectedFlowers[0];
+    });
+
+    exactFlowerList.forEach((flowerIndex, index) => {
+      const angle = index * 137.5 * (Math.PI / 180);
+      const radius = 42 * Math.sqrt(index);
+      const centerX = 512 + Math.cos(angle) * radius;
+      const centerY = 420 + Math.sin(angle) * radius * .66;
+      const size = Math.max(104, 174 - count * 2.4) + ((index * 11) % 22);
+      const column = flowerIndex % 5;
+      const row = Math.floor(flowerIndex / 5);
+      const sourceWidth = atlas.naturalWidth / 5;
+      const sourceHeight = atlas.naturalHeight / 2;
+
+      context.save();
+      context.beginPath();
+      context.arc(centerX, centerY, size / 2, 0, Math.PI * 2);
+      context.clip();
+      context.drawImage(
+        atlas,
+        column * sourceWidth,
+        row * sourceHeight,
+        sourceWidth,
+        sourceHeight * .78,
+        centerX - size / 2,
+        centerY - size / 2,
+        size,
+        size * 1.18,
+      );
+      context.restore();
+    });
+
+    context.strokeStyle = "#efe6d6";
+    context.lineWidth = 18;
+    context.beginPath();
+    context.ellipse(512, 775, 112, 30, -.06, 0, Math.PI * 2);
+    context.stroke();
+
+    return canvas.toDataURL("image/jpeg", .9);
+  }
+
   function toggleFlower(index: number) {
     setGenerated(false);
     setSelectedFlowers((current) => {
@@ -64,6 +155,7 @@ export default function BouquetBuilder() {
     setGenerated(false);
 
     try {
+      const referenceImage = await buildReferenceImage();
       const response = await fetch("/api/generate-bouquet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,6 +163,7 @@ export default function BouquetBuilder() {
           count,
           flowers: selectedFlowers.map((index) => flowers[index].name),
           wraps: selectedWraps.map((index) => wraps[index].name),
+          referenceImage,
         }),
       });
       const data = await response.json();
