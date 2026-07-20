@@ -11,6 +11,8 @@ import {
   PAYMENT_METHOD_VALUES,
   type PaymentMethod,
 } from "@/lib/orderOptions";
+import { getOrderByNumber } from "@/lib/orders";
+import { sendOrderNotificationEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -216,6 +218,13 @@ export async function POST(request: NextRequest) {
 
       return finalNumber;
     });
+
+    // The order is already committed at this point — an email hiccup must
+    // never turn into an order-creation failure for the buyer.
+    const orderDetail = await getOrderByNumber(orderNumber);
+    if (orderDetail) {
+      await sendOrderNotificationEmail(orderDetail);
+    }
 
     return NextResponse.json({ orderNumber, subtotalCents }, { status: 201 });
   } catch (error) {
