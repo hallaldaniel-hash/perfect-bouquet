@@ -1,42 +1,77 @@
 "use client";
 
-import { CSSProperties, useRef, useState } from "react";
+import { CSSProperties, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import type { CatalogFlower, CatalogWrap } from "@/lib/catalog";
+import { computeSubtotalCents, formatCents } from "@/lib/pricing";
+import { LoveNoteCard } from "@/components/LoveNoteCard";
+import CheckoutView, { type CheckoutBouquet } from "./CheckoutView";
 
-const flowers = [
-  { name: "Garden Rose", meaning: "devotion", position: "0% 0%" },
-  { name: "Blush Peony", meaning: "happy love", position: "25% 0%" },
-  { name: "Pink Tulip", meaning: "affection", position: "50% 0%" },
-  { name: "White Lily", meaning: "pure love", position: "75% 0%" },
-  { name: "Ranunculus", meaning: "radiance", position: "100% 0%" },
-  { name: "White Orchid", meaning: "rare beauty", position: "0% 100%" },
-  { name: "Delphinium", meaning: "big heart", position: "25% 100%" },
-  { name: "Sweet Pea", meaning: "sweetness", position: "50% 100%" },
-  { name: "Anemone", meaning: "anticipation", position: "75% 100%" },
-  { name: "Baby’s Breath", meaning: "everlasting love", position: "100% 100%" },
-];
+const GIFT_NOTE_MAX = 600;
 
-const wraps = [
-  { name: "Warm Ivory", color: "#eee5d6" },
-  { name: "Blush Pink", color: "#d9aca5" },
-  { name: "Botanical Olive", color: "#596348" },
-  { name: "Sage Green", color: "#9da88a" },
-  { name: "Dusty Blue", color: "#8fa6ad" },
-  { name: "Soft Lilac", color: "#b8a6c2" },
-  { name: "Champagne", color: "#cdbb94" },
-  { name: "Deep Burgundy", color: "#6d293a" },
-  { name: "Natural Kraft", color: "#ad865c" },
-  { name: "Midnight", color: "#28333a" },
-];
+interface BouquetBuilderProps {
+  flowers: CatalogFlower[];
+  wraps: CatalogWrap[];
+}
 
-export default function BouquetBuilder() {
+export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) {
   const [count, setCount] = useState(15);
   const [selectedFlowers, setSelectedFlowers] = useState([0, 1, 4]);
   const [selectedWraps, setSelectedWraps] = useState([0]);
+  const [recipientName, setRecipientName] = useState("");
+  const [giftMessage, setGiftMessage] = useState("");
+  const [fromName, setFromName] = useState("");
   const [generated, setGenerated] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [generationError, setGenerationError] = useState("");
+  const [stage, setStage] = useState<"build" | "checkout">("build");
+  const [checkoutBouquet, setCheckoutBouquet] = useState<CheckoutBouquet | null>(null);
+  const [noteError, setNoteError] = useState("");
   const resultRef = useRef<HTMLElement>(null);
+  const noteRef = useRef<HTMLElement>(null);
+
+  // Live subtotal — recomputed from DB-sourced prices whenever the customer
+  // changes stem count, flower selection, or wraps. The server recomputes this
+  // independently at checkout, so this is display-only.
+  const subtotalCents = useMemo(
+    () =>
+      computeSubtotalCents(
+        count,
+        selectedFlowers.map((index) => flowers[index]),
+        selectedWraps.map((index) => wraps[index]),
+      ),
+    [count, selectedFlowers, selectedWraps, flowers, wraps],
+  );
+
+  function goToCheckout() {
+    if (!recipientName.trim() || !giftMessage.trim()) {
+      setNoteError("Add her name and a little message before checkout.");
+      noteRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    setNoteError("");
+    const checkoutBouquet: CheckoutBouquet = {
+      stemCount: count,
+      flowers: selectedFlowers.map((index) => ({
+        id: flowers[index].id,
+        name: flowers[index].name,
+        pricePerStem: flowers[index].pricePerStem,
+      })),
+      wraps: selectedWraps.map((index) => ({
+        id: wraps[index].id,
+        name: wraps[index].name,
+        color: wraps[index].color,
+        priceModifier: wraps[index].priceModifier,
+      })),
+      subtotalCents,
+      imageUrl: generatedImage,
+      giftNote: { recipientName, message: giftMessage, fromName },
+    };
+    setCheckoutBouquet(checkoutBouquet);
+    setStage("checkout");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   function loadFlowerAtlas() {
     return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -202,17 +237,21 @@ export default function BouquetBuilder() {
     }
   }
 
+  if (stage === "checkout" && checkoutBouquet) {
+    return <CheckoutView bouquet={checkoutBouquet} onBack={() => { setStage("build"); window.scrollTo({ top: 0 }); }} />;
+  }
+
   return (
     <main className="builder-page">
       <header className="builder-header">
-        <a className="builder-brand" href="/" aria-label="Back to the beginning">
+        <Link className="builder-brand" href="/" aria-label="Back to the beginning">
           <span>p</span><span>✿</span><span>b</span>
-        </a>
+        </Link>
         <div>
           <p>THE PERFECT BOUQUET</p>
           <span>made with love, just for you</span>
         </div>
-        <a className="back-link" href="/">← Back</a>
+        <Link className="back-link" href="/">← Back</Link>
       </header>
 
       <section className="builder-intro">
@@ -298,9 +337,65 @@ export default function BouquetBuilder() {
         </div>
       </section>
 
+      <section className="choice-section note-section" aria-labelledby="note-title" ref={noteRef}>
+        <div className="section-heading">
+          <div><span>04</span><h2 id="note-title">Write her card</h2></div>
+          <p>Tucked in with the flowers</p>
+        </div>
+        <div className="note-layout">
+          <div className="note-fields">
+            <label className="field">
+              <span className="field-label">Who is it for?</span>
+              <input
+                type="text"
+                className="field-input"
+                value={recipientName}
+                maxLength={80}
+                placeholder="Her name"
+                onChange={(event) => setRecipientName(event.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">Your message</span>
+              <textarea
+                className="field-textarea"
+                value={giftMessage}
+                maxLength={GIFT_NOTE_MAX}
+                placeholder="Say the thing you'd write by hand…"
+                onChange={(event) => setGiftMessage(event.target.value)}
+              />
+              <span className="field-hint">{giftMessage.length}/{GIFT_NOTE_MAX} · line breaks become new lines on the card</span>
+            </label>
+            <label className="field">
+              <span className="field-label">Signed</span>
+              <input
+                type="text"
+                className="field-input"
+                value={fromName}
+                maxLength={80}
+                placeholder="Your name"
+                onChange={(event) => setFromName(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="note-preview" aria-hidden="true">
+            <LoveNoteCard
+              recipientName={recipientName}
+              message={giftMessage}
+              fromName={fromName}
+              preview
+            />
+          </div>
+        </div>
+      </section>
+
       <div className="generate-row">
-        <div>
+        <div className="generate-summary">
           <p>{count} blooms · {selectedFlowers.length} flower types · {selectedWraps.length} wrap {selectedWraps.length === 1 ? "color" : "colors"}</p>
+          <div className="running-subtotal">
+            <span>Your bouquet so far</span>
+            <output aria-live="polite">{formatCents(subtotalCents)}</output>
+          </div>
           {generationError && <p className="generation-error" role="alert">{generationError}</p>}
         </div>
         <button type="button" className="generate-button" onClick={generateBouquet} disabled={generating}>
@@ -311,30 +406,31 @@ export default function BouquetBuilder() {
       {generated && generatedImage && (
         <section className="bouquet-result" ref={resultRef} aria-live="polite">
           <div className="result-title">
-            <span>made especially for Dashunya</span>
+            <span>made especially for {recipientName.trim() || "someone lovely"}</span>
             <h2>Your bouquet is ready.</h2>
           </div>
           <div className="result-layout">
             <div className="ai-bouquet-frame">
-              <img src={generatedImage} alt={`A custom ${count}-flower anniversary bouquet`} />
+              <img src={generatedImage} alt={`A custom ${count}-flower bouquet`} />
               <span className="ai-bouquet-label">your one-of-a-kind bouquet</span>
             </div>
 
-            <article className="love-note">
-              <span className="note-label">a note from Daniel</span>
-              <span className="wax-heart" aria-hidden="true">♥</span>
-              <p>Dear, Dashunya.</p>
-              <p>Happy 2nd anniversary to us <span className="inline-heart">♥</span></p>
-              <p>
-                I love you so much, angel, and I am very excited to see you soon.
-                Enjoy your day today, my love, and I hope Kenya is treating you wonderfully!
-              </p>
-              <p className="signature">Yours truly,<br /><em>Daniel</em> <span>♥</span></p>
-            </article>
+            <LoveNoteCard
+              recipientName={recipientName}
+              message={giftMessage}
+              fromName={fromName}
+              preview
+            />
           </div>
-          <button className="edit-button" type="button" onClick={() => { setGenerated(false); setGeneratedImage(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-            Change a few petals
-          </button>
+          <div className="result-actions">
+            <button className="checkout-cta" type="button" onClick={goToCheckout}>
+              <span>Send this bouquet</span><b aria-hidden="true">→</b>
+            </button>
+            {noteError && <p className="note-error" role="alert">{noteError}</p>}
+            <button className="edit-button" type="button" onClick={() => { setGenerated(false); setGeneratedImage(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+              Change a few petals
+            </button>
+          </div>
         </section>
       )}
     </main>

@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Flower {
+  id           String          @id @default(cuid())
+  name         String          @unique
+  meaning      String
+  // CSS background-position into the sprite atlas for the selector grid.
+  position     String
+  // Preserves the original hardcoded array order; the builder maps a flower's
+  // index (0-9) onto the atlas sprite cell, so ordering must stay stable.
+  sortOrder    Int             @unique
+  pricePerStem Int
+  active       Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  bouquetItems BouquetFlower[]
+}
+
+model WrapColor {
+  id            String        @id @default(cuid())
+  name          String        @unique
+  color         String
+  sortOrder     Int           @unique
+  priceModifier Int           @default(0)
+  active        Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  bouquetWraps  BouquetWrap[]
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+}
+
+enum PaymentMethod {
+  WHISH_MONEY
+  CASH_ON_DELIVERY
+  // TODO: add CARD once Stripe (or another card processor) is integrated
+}
+
+model Order {
+  id            Int      @id @default(autoincrement())
+  orderNumber   String   @unique
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  recipientName    String
+  recipientPhone   String
+  deliveryAddress  String
+  deliveryDate     DateTime
+  deliveryTimeSlot String
+
+  giftNoteRecipient String
+  giftNoteMessage   String
+  giftNoteFrom      String
+
+  paymentMethod PaymentMethod
+  status        OrderStatus   @default(PENDING_PAYMENT)
+
+  subtotalCents Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bouquet Bouquet?
+}
+
+model Bouquet {
+  id      String @id @default(cuid())
+  orderId Int    @unique
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  stemCount Int
+
+  flowers BouquetFlower[]
+  wraps   BouquetWrap[]
+}
+
+model BouquetFlower {
+  id String @id @default(cuid())
+
+  bouquetId String
+  bouquet   Bouquet @relation(fields: [bouquetId], references: [id])
+
+  flowerId String
+  flower   Flower @relation(fields: [flowerId], references: [id])
+
+  stemCount Int
+
+  @@unique([bouquetId, flowerId])
+}
+
+model BouquetWrap {
+  id String @id @default(cuid())
+
+  bouquetId String
+  bouquet   Bouquet @relation(fields: [bouquetId], references: [id])
+
+  wrapColorId String
+  wrapColor   WrapColor @relation(fields: [wrapColorId], references: [id])
+
+  // 0 = primary wrap layer, 1 = secondary wrap layer when two colors are mixed
+  position Int
+
+  @@unique([bouquetId, wrapColorId])
+}
