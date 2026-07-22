@@ -160,7 +160,9 @@
 .flower-image {
   display: block;
   width: 100%;
-  aspect-ratio: .9;
+  /* Matches the new artwork's own crop (680x1020) exactly, so background-size:
+     cover has nothing to crop — every stem and leaf stays fully visible. */
+  aspect-ratio: 680 / 1020;
   margin-bottom: 16px;
   /* background-image is set per flower from the catalog */
   background-repeat: no-repeat;
@@ -630,7 +632,6 @@
   .section-heading > p { max-width: 100px; text-align: right; line-height: 1.5; }
   .section-heading output { font-size: 36px; white-space: nowrap; }
   .flower-grid { gap: 10px; }
-  .flower-image { aspect-ratio: .88; }
   .flower-meta { padding: 0 11px; }
   .flower-meta strong { font-size: 16px; }
   .wrap-scroller { grid-auto-columns: 136px; }
