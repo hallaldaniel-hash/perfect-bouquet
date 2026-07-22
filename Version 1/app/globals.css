@@ -1,0 +1,429 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap');
+@import "tailwindcss";
+
+:root {
+  --olive: #4f5840;
+  --olive-deep: #39422f;
+  --olive-soft: #788064;
+  --cream: #f4efe5;
+  --paper: #ede5d6;
+  --blush: #d6aaa0;
+  --ink: #30372a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: "DM Sans", sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.landing-shell {
+  min-height: 100svh;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 70% 35%, rgba(255,255,255,.62), transparent 28%),
+    linear-gradient(112deg, var(--cream) 0 52%, var(--olive) 52% 100%);
+}
+
+.grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: .17;
+  z-index: 10;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.26'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+.site-header {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 104px;
+  padding: 0 clamp(28px, 5.4vw, 88px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.monogram {
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgba(79, 88, 64, .34);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  color: var(--olive-deep);
+  font-family: "Cormorant Garamond", serif;
+  font-size: 22px;
+  font-style: italic;
+}
+
+.monogram-flower {
+  color: var(--blush);
+  font-family: serif;
+  font-size: 11px;
+}
+
+.tiny-note {
+  margin: 0;
+  color: rgba(244, 239, 229, .74);
+  font-size: 10px;
+  letter-spacing: .19em;
+  text-transform: uppercase;
+}
+
+.hero {
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: 52% 48%;
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 2;
+  padding: 150px clamp(42px, 6vw, 105px) 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.eyebrow {
+  margin: 0 0 28px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: var(--olive-soft);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: copy-rise .8s .25s ease-out forwards;
+}
+
+.eyebrow-line {
+  width: 38px;
+  height: 1px;
+  background: var(--blush);
+}
+
+h1 {
+  max-width: 720px;
+  margin: 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 400;
+  line-height: .89;
+  letter-spacing: -.045em;
+  color: var(--olive-deep);
+}
+
+h1 span,
+h1 em {
+  display: block;
+  opacity: 0;
+  transform: translateY(28px);
+  animation: title-rise 1.05s cubic-bezier(.2,.75,.28,1) forwards;
+}
+
+h1 span {
+  font-size: clamp(55px, 6.3vw, 104px);
+  animation-delay: .45s;
+}
+
+h1 em {
+  margin-left: clamp(24px, 4vw, 72px);
+  color: var(--blush);
+  font-size: clamp(43px, 5.3vw, 88px);
+  font-weight: 400;
+  animation-delay: .7s;
+}
+
+.intro {
+  max-width: 430px;
+  margin: 38px 0 0;
+  color: #6a705f;
+  font-family: "Cormorant Garamond", serif;
+  font-size: clamp(18px, 1.5vw, 23px);
+  line-height: 1.5;
+  opacity: 0;
+  animation: copy-rise .9s 1s ease-out forwards;
+}
+
+.quiz-button {
+  min-width: 198px;
+  margin-top: 38px;
+  padding: 8px 9px 8px 25px;
+  border-radius: 999px;
+  background: var(--olive);
+  color: var(--cream);
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  box-shadow: 0 14px 30px rgba(57,66,47,.17);
+  opacity: 0;
+  animation: copy-rise .9s 1.18s ease-out forwards;
+  transition: transform .28s ease, background .28s ease, box-shadow .28s ease;
+}
+
+.quiz-button:hover,
+.quiz-button:focus-visible {
+  background: var(--olive-deep);
+  transform: translateY(-3px);
+  box-shadow: 0 18px 35px rgba(57,66,47,.25);
+  outline: none;
+}
+
+.button-arrow {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--cream);
+  color: var(--olive-deep);
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  transition: transform .28s ease;
+}
+
+.quiz-button:hover .button-arrow {
+  transform: rotate(45deg);
+}
+
+.love-signature {
+  position: absolute;
+  left: clamp(42px, 6vw, 105px);
+  bottom: 35px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: rgba(79,88,64,.56);
+  font-family: "Cormorant Garamond", serif;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.heart {
+  color: var(--blush);
+  font-size: 10px;
+}
+
+.garden {
+  min-height: 100svh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+}
+
+.garden::before,
+.garden::after {
+  content: "";
+  position: absolute;
+  border: 1px solid rgba(244,239,229,.16);
+  border-radius: 50%;
+}
+
+.garden::before {
+  width: 74%;
+  aspect-ratio: 1;
+}
+
+.garden::after {
+  width: 50%;
+  aspect-ratio: 1;
+}
+
+.sun-wash {
+  position: absolute;
+  top: 8%;
+  right: -13%;
+  width: 53%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(237,229,214,.11);
+  filter: blur(2px);
+}
+
+.bouquet-wrap {
+  position: relative;
+  z-index: 2;
+  width: min(88%, 710px);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transform: translateY(90px) scale(.28) rotate(-5deg);
+  transform-origin: 50% 84%;
+  animation: bouquet-bloom 2.6s .25s cubic-bezier(.16,.72,.23,1) forwards;
+}
+
+.bouquet {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  max-height: 82svh;
+  object-fit: contain;
+  filter: drop-shadow(0 38px 36px rgba(29,35,24,.22));
+}
+
+.bouquet-halo {
+  position: absolute;
+  width: 67%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(244,239,229,.16);
+  filter: blur(35px);
+  transform: scale(.2);
+  animation: halo-bloom 2.5s .55s ease-out forwards;
+}
+
+.sparkle {
+  position: absolute;
+  z-index: 3;
+  color: rgba(244,239,229,.88);
+  opacity: 0;
+  animation: sparkle 1.4s ease-out forwards;
+}
+
+.sparkle-one { top: 14%; left: 12%; animation-delay: 1.6s; font-size: 21px; }
+.sparkle-two { top: 28%; right: 4%; animation-delay: 2.1s; font-size: 14px; }
+.sparkle-three { bottom: 24%; left: 6%; animation-delay: 2.35s; font-size: 28px; }
+
+.botanical-name {
+  position: absolute;
+  color: rgba(244,239,229,.46);
+  font-family: "Cormorant Garamond", serif;
+  font-size: 12px;
+  font-style: italic;
+  letter-spacing: .08em;
+  writing-mode: vertical-rl;
+}
+
+.name-one { top: 17%; right: 5%; }
+.name-two { bottom: 18%; left: 5%; transform: rotate(180deg); }
+
+.bloom-caption {
+  position: absolute;
+  right: 7%;
+  bottom: 32px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: rgba(244,239,229,.69);
+  font-size: 9px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.bloom-caption span {
+  padding-right: 12px;
+  border-right: 1px solid rgba(244,239,229,.28);
+  font-family: "Cormorant Garamond", serif;
+  font-size: 18px;
+}
+
+.quiz-anchor { position: absolute; bottom: 0; }
+
+@keyframes title-rise {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes copy-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bouquet-bloom {
+  0% { opacity: 0; transform: translateY(90px) scale(.28) rotate(-5deg); filter: blur(6px); }
+  38% { opacity: 1; }
+  72% { transform: translateY(-5px) scale(1.025) rotate(1deg); filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0); filter: blur(0); }
+}
+
+@keyframes halo-bloom {
+  to { transform: scale(1); }
+}
+
+@keyframes sparkle {
+  0% { opacity: 0; transform: scale(.2) rotate(-25deg); }
+  45% { opacity: 1; }
+  100% { opacity: .6; transform: scale(1) rotate(0); }
+}
+
+@media (max-width: 840px) {
+  .landing-shell {
+    background: linear-gradient(180deg, var(--cream) 0 55%, var(--olive) 55% 100%);
+  }
+
+  .site-header {
+    height: 84px;
+    padding: 0 24px;
+  }
+
+  .tiny-note { color: var(--olive-soft); font-size: 8px; }
+  .monogram { width: 48px; height: 48px; }
+
+  .hero {
+    min-height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .hero-copy {
+    min-height: 55svh;
+    padding: 125px 27px 54px;
+    justify-content: flex-start;
+  }
+
+  .eyebrow { margin-bottom: 22px; }
+  h1 span { font-size: clamp(49px, 14.5vw, 70px); }
+  h1 em { margin-left: 14px; font-size: clamp(40px, 12.5vw, 62px); }
+  .intro { max-width: 340px; margin-top: 27px; font-size: 18px; }
+  .quiz-button { margin-top: 27px; }
+  .love-signature { display: none; }
+
+  .garden {
+    min-height: 45svh;
+    padding: 28px 12px 18px;
+  }
+
+  .bouquet-wrap { width: min(92%, 470px); margin-top: -20px; }
+  .bouquet { max-height: 49svh; }
+  .bloom-caption { right: 20px; bottom: 17px; }
+  .botanical-name { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}

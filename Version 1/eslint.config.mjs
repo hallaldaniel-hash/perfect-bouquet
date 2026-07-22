@@ -12,8 +12,6 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Frozen snapshot of an earlier build — not part of the live app.
-    "Version 1/**",
   ]),
 ]);
 
