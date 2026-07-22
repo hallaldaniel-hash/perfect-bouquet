@@ -7,18 +7,19 @@ const prisma = new PrismaClient({ adapter });
 
 // Order matches the original hardcoded arrays in BouquetBuilder.tsx; the index
 // becomes sortOrder and drives the atlas sprite cell, so do not reorder.
-// Prices are placeholders in cents — adjust to real catalog pricing before launch.
+// category groups the selector (main | decorative | filler | greenery). This is
+// the current 10-flower set; the larger catalog is added in a later phase.
 const flowers = [
-  { name: "Garden Rose", meaning: "devotion", position: "0% 0%", pricePerStem: 350 },
-  { name: "Blush Peony", meaning: "happy love", position: "25% 0%", pricePerStem: 650 },
-  { name: "Pink Tulip", meaning: "affection", position: "50% 0%", pricePerStem: 300 },
-  { name: "White Lily", meaning: "pure love", position: "75% 0%", pricePerStem: 400 },
-  { name: "Ranunculus", meaning: "radiance", position: "100% 0%", pricePerStem: 500 },
-  { name: "White Orchid", meaning: "rare beauty", position: "0% 100%", pricePerStem: 900 },
-  { name: "Delphinium", meaning: "big heart", position: "25% 100%", pricePerStem: 350 },
-  { name: "Sweet Pea", meaning: "sweetness", position: "50% 100%", pricePerStem: 300 },
-  { name: "Anemone", meaning: "anticipation", position: "75% 100%", pricePerStem: 400 },
-  { name: "Baby’s Breath", meaning: "everlasting love", position: "100% 100%", pricePerStem: 150 },
+  { name: "Garden Rose", meaning: "devotion", position: "0% 0%", category: "main" },
+  { name: "Blush Peony", meaning: "happy love", position: "25% 0%", category: "main" },
+  { name: "Pink Tulip", meaning: "affection", position: "50% 0%", category: "main" },
+  { name: "White Lily", meaning: "pure love", position: "75% 0%", category: "main" },
+  { name: "Ranunculus", meaning: "radiance", position: "100% 0%", category: "main" },
+  { name: "White Orchid", meaning: "rare beauty", position: "0% 100%", category: "main" },
+  { name: "Delphinium", meaning: "big heart", position: "25% 100%", category: "decorative" },
+  { name: "Sweet Pea", meaning: "sweetness", position: "50% 100%", category: "decorative" },
+  { name: "Anemone", meaning: "anticipation", position: "75% 100%", category: "decorative" },
+  { name: "Baby’s Breath", meaning: "everlasting love", position: "100% 100%", category: "filler" },
 ];
 
 // priceModifier is a flat cents surcharge added once per bouquet for that wrap color.

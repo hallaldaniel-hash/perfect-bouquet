@@ -1,20 +1,19 @@
 import { prisma } from "@/lib/prisma";
 
-// Shapes handed to the (client) builder. Only fields the UI/pricing need — no
+// Shapes handed to the (client) builder. Only fields the UI needs — no
 // timestamps or internal flags leak to the browser.
 export interface CatalogFlower {
   id: string;
   name: string;
   meaning: string;
   position: string;
-  pricePerStem: number;
+  category: string;
 }
 
 export interface CatalogWrap {
   id: string;
   name: string;
   color: string;
-  priceModifier: number;
 }
 
 export interface Catalog {
@@ -37,7 +36,7 @@ export async function getCatalog(): Promise<Catalog> {
         name: true,
         meaning: true,
         position: true,
-        pricePerStem: true,
+        category: true,
       },
     }),
     prisma.wrapColor.findMany({
@@ -47,7 +46,6 @@ export async function getCatalog(): Promise<Catalog> {
         id: true,
         name: true,
         color: true,
-        priceModifier: true,
       },
     }),
   ]);

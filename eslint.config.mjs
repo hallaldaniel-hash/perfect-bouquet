@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Frozen snapshot of an earlier build — not part of the live app.
     "Version 1/**",
+    // Local tooling (design skills, MCP scripts) — not our source.
+    ".claude/**",
   ]),
 ]);
 

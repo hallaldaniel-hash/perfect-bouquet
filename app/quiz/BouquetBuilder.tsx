@@ -1,11 +1,11 @@
 "use client";
 
-import { CSSProperties, useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import type { CatalogFlower, CatalogWrap } from "@/lib/catalog";
-import { computeSubtotalCents, formatCents } from "@/lib/pricing";
 import { LoveNoteCard } from "@/components/LoveNoteCard";
-import CheckoutView, { type CheckoutBouquet } from "./CheckoutView";
+import SendGiftView, { type GiftBouquet } from "./SendGiftView";
 
 const GIFT_NOTE_MAX = 600;
 
@@ -23,53 +23,41 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
   const [fromName, setFromName] = useState("");
   const [generated, setGenerated] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  // Base64 data URL of the same image — persisted with the gift so it can be
+  // embedded in the email that goes out later.
+  const [generatedImageData, setGeneratedImageData] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [generationError, setGenerationError] = useState("");
-  const [stage, setStage] = useState<"build" | "checkout">("build");
-  const [checkoutBouquet, setCheckoutBouquet] = useState<CheckoutBouquet | null>(null);
+  const [stage, setStage] = useState<"build" | "send">("build");
+  const [giftBouquet, setGiftBouquet] = useState<GiftBouquet | null>(null);
   const [noteError, setNoteError] = useState("");
   const resultRef = useRef<HTMLElement>(null);
   const noteRef = useRef<HTMLElement>(null);
 
-  // Live subtotal — recomputed from DB-sourced prices whenever the customer
-  // changes stem count, flower selection, or wraps. The server recomputes this
-  // independently at checkout, so this is display-only.
-  const subtotalCents = useMemo(
-    () =>
-      computeSubtotalCents(
-        count,
-        selectedFlowers.map((index) => flowers[index]),
-        selectedWraps.map((index) => wraps[index]),
-      ),
-    [count, selectedFlowers, selectedWraps, flowers, wraps],
-  );
-
-  function goToCheckout() {
+  function goToSend() {
     if (!recipientName.trim() || !giftMessage.trim()) {
-      setNoteError("Add her name and a little message before checkout.");
+      setNoteError("Add their name and a little message before sending.");
       noteRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     setNoteError("");
-    const checkoutBouquet: CheckoutBouquet = {
+    const bouquet: GiftBouquet = {
       stemCount: count,
       flowers: selectedFlowers.map((index) => ({
         id: flowers[index].id,
         name: flowers[index].name,
-        pricePerStem: flowers[index].pricePerStem,
       })),
       wraps: selectedWraps.map((index) => ({
         id: wraps[index].id,
         name: wraps[index].name,
         color: wraps[index].color,
-        priceModifier: wraps[index].priceModifier,
       })),
-      subtotalCents,
       imageUrl: generatedImage,
-      giftNote: { recipientName, message: giftMessage, fromName },
+      imageData: generatedImageData,
+      letter: { recipientName, message: giftMessage, fromName },
     };
-    setCheckoutBouquet(checkoutBouquet);
-    setStage("checkout");
+    setGiftBouquet(bouquet);
+    setStage("send");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -228,6 +216,17 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
       const imageUrl = URL.createObjectURL(imageBlob);
       if (generatedImage?.startsWith("blob:")) URL.revokeObjectURL(generatedImage);
       setGeneratedImage(imageUrl);
+
+      // Keep a base64 copy so the gift can carry the image to the server, where
+      // it is stored and later embedded in the delivered email.
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Could not prepare the bouquet image."));
+        reader.readAsDataURL(imageBlob);
+      });
+      setGeneratedImageData(dataUrl);
+
       setGenerated(true);
       window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch (error) {
@@ -237,8 +236,8 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
     }
   }
 
-  if (stage === "checkout" && checkoutBouquet) {
-    return <CheckoutView bouquet={checkoutBouquet} onBack={() => { setStage("build"); window.scrollTo({ top: 0 }); }} />;
+  if (stage === "send" && giftBouquet) {
+    return <SendGiftView bouquet={giftBouquet} onBack={() => { setStage("build"); window.scrollTo({ top: 0 }); }} />;
   }
 
   return (
@@ -392,10 +391,6 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
       <div className="generate-row">
         <div className="generate-summary">
           <p>{count} blooms · {selectedFlowers.length} flower types · {selectedWraps.length} wrap {selectedWraps.length === 1 ? "color" : "colors"}</p>
-          <div className="running-subtotal">
-            <span>Your bouquet so far</span>
-            <output aria-live="polite">{formatCents(subtotalCents)}</output>
-          </div>
           {generationError && <p className="generation-error" role="alert">{generationError}</p>}
         </div>
         <button type="button" className="generate-button" onClick={generateBouquet} disabled={generating}>
@@ -423,11 +418,11 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
             />
           </div>
           <div className="result-actions">
-            <button className="checkout-cta" type="button" onClick={goToCheckout}>
+            <button className="checkout-cta" type="button" onClick={goToSend}>
               <span>Send this bouquet</span><b aria-hidden="true">→</b>
             </button>
             {noteError && <p className="note-error" role="alert">{noteError}</p>}
-            <button className="edit-button" type="button" onClick={() => { setGenerated(false); setGeneratedImage(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+            <button className="edit-button" type="button" onClick={() => { setGenerated(false); setGeneratedImage(null); setGeneratedImageData(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
               Change a few petals
             </button>
           </div>

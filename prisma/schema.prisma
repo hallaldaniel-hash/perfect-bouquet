@@ -8,112 +8,99 @@ datasource db {
 }
 
 model Flower {
-  id           String          @id @default(cuid())
-  name         String          @unique
+  id           String       @id @default(cuid())
+  name         String       @unique
   meaning      String
   // CSS background-position into the sprite atlas for the selector grid.
   position     String
-  // Preserves the original hardcoded array order; the builder maps a flower's
-  // index (0-9) onto the atlas sprite cell, so ordering must stay stable.
-  sortOrder    Int             @unique
-  pricePerStem Int
-  active       Boolean         @default(true)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  bouquetItems BouquetFlower[]
+  // Preserves catalog order; the builder maps a flower's index onto the atlas
+  // sprite cell, so ordering must stay stable.
+  sortOrder    Int          @unique
+  // main | decorative | filler | greenery — groups the selector. Colour variants
+  // (White Rose, Pink Rose, ...) are just separate rows sharing a category.
+  category     String       @default("main")
+  // Kept from the old paid model; unused now that the platform is free, but
+  // harmless to retain for a possible future.
+  pricePerStem Int          @default(0)
+  active       Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  giftItems    GiftFlower[]
 }
 
 model WrapColor {
-  id            String        @id @default(cuid())
-  name          String        @unique
+  id            String     @id @default(cuid())
+  name          String     @unique
   color         String
-  sortOrder     Int           @unique
-  priceModifier Int           @default(0)
-  active        Boolean       @default(true)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  bouquetWraps  BouquetWrap[]
+  sortOrder     Int        @unique
+  priceModifier Int        @default(0)
+  active        Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  giftWraps     GiftWrap[]
 }
 
-model Customer {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  phone     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  orders    Order[]
+enum GiftStatus {
+  SCHEDULED
+  SENT
+  FAILED
+  CANCELED
 }
 
-enum OrderStatus {
-  PENDING_PAYMENT
-  CONFIRMED
-}
+model Gift {
+  // Unguessable id — it appears in shareable/confirmation URLs, and gifts carry
+  // personal messages, so it must not be enumerable like a sequential number.
+  id String @id @default(uuid())
 
-enum PaymentMethod {
-  WHISH_MONEY
-  CASH_ON_DELIVERY
-  // TODO: add CARD once Stripe (or another card processor) is integrated
-}
+  // Who is sending, and who receives the emailed bouquet.
+  senderName     String
+  senderEmail    String
+  recipientName  String
+  recipientEmail String
 
-model Order {
-  id            Int      @id @default(autoincrement())
-  orderNumber   String   @unique
+  // The letter shown on the card in the delivered email.
+  message  String
+  fromName String
 
-  customerId String
-  customer   Customer @relation(fields: [customerId], references: [id])
-
-  recipientName    String
-  recipientPhone   String
-  deliveryAddress  String
-  deliveryDate     DateTime
-  deliveryTimeSlot String
-
-  giftNoteRecipient String
-  giftNoteMessage   String
-  giftNoteFrom      String
-
-  paymentMethod PaymentMethod
-  status        OrderStatus   @default(PENDING_PAYMENT)
-
-  subtotalCents Int
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  bouquet Bouquet?
-}
-
-model Bouquet {
-  id      String @id @default(cuid())
-  orderId Int    @unique
-  order   Order  @relation(fields: [orderId], references: [id])
-
+  // Bouquet composition + the generated image we persist so it can be embedded
+  // in the email that goes out later.
   stemCount Int
+  imageData Bytes
+  imageMime String @default("image/jpeg")
 
-  flowers BouquetFlower[]
-  wraps   BouquetWrap[]
+  // Scheduling. scheduledAt is stored in UTC; the sender picks a local time.
+  scheduledAt DateTime
+  status      GiftStatus @default(SCHEDULED)
+  sentAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  flowers GiftFlower[]
+  wraps   GiftWrap[]
+
+  @@index([status, scheduledAt])
 }
 
-model BouquetFlower {
+model GiftFlower {
   id String @id @default(cuid())
 
-  bouquetId String
-  bouquet   Bouquet @relation(fields: [bouquetId], references: [id])
+  giftId String
+  gift   Gift   @relation(fields: [giftId], references: [id], onDelete: Cascade)
 
   flowerId String
   flower   Flower @relation(fields: [flowerId], references: [id])
 
   stemCount Int
 
-  @@unique([bouquetId, flowerId])
+  @@unique([giftId, flowerId])
 }
 
-model BouquetWrap {
+model GiftWrap {
   id String @id @default(cuid())
 
-  bouquetId String
-  bouquet   Bouquet @relation(fields: [bouquetId], references: [id])
+  giftId String
+  gift   Gift   @relation(fields: [giftId], references: [id], onDelete: Cascade)
 
   wrapColorId String
   wrapColor   WrapColor @relation(fields: [wrapColorId], references: [id])
@@ -121,5 +108,5 @@ model BouquetWrap {
   // 0 = primary wrap layer, 1 = secondary wrap layer when two colors are mixed
   position Int
 
-  @@unique([bouquetId, wrapColorId])
+  @@unique([giftId, wrapColorId])
 }

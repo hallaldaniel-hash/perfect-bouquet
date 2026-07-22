@@ -526,6 +526,23 @@
 .pay-option.selected .pay-mark { background: #596348; border-color: #596348; color: #f4efe5; }
 .pay-note { margin: 16px 0 0; color: #a2a597; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
 
+/* Send-timing choice — same selectable-card idiom as payment/flowers */
+.send-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.send-mode-option {
+  padding: 22px;
+  border: 1px solid rgba(79,88,64,.24);
+  background: rgba(255,255,255,.35);
+  color: #39422f;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .22s ease, border-color .22s ease, background .22s ease;
+}
+.send-mode-option:hover { transform: translateY(-3px); background: rgba(255,255,255,.6); }
+.send-mode-option.selected { border-color: #596348; background: #fbf8f1; }
+.send-mode-option strong { display: block; font-family: "Cormorant Garamond", serif; font-size: 21px; font-weight: 500; }
+.send-mode-option small { display: block; margin-top: 7px; color: #7d836f; font-size: 12px; line-height: 1.45; }
+.send-when-field { margin-top: 20px; }
+
 /* Order summary aside */
 .checkout-summary {
   position: sticky;
@@ -604,6 +621,7 @@
   .checkout-grid { width: calc(100% - 30px); }
   .field-row { grid-template-columns: 1fr; }
   .pay-options { grid-template-columns: 1fr; }
+  .send-mode { grid-template-columns: 1fr; }
   .checkout-intro { margin-bottom: 40px; }
 }
 

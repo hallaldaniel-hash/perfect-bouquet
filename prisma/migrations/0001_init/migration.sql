@@ -2,10 +2,7 @@
 CREATE SCHEMA IF NOT EXISTS "public";
 
 -- CreateEnum
-CREATE TYPE "OrderStatus" AS ENUM ('PENDING_PAYMENT', 'CONFIRMED');
-
--- CreateEnum
-CREATE TYPE "PaymentMethod" AS ENUM ('WHISH_MONEY', 'CASH_ON_DELIVERY');
+CREATE TYPE "GiftStatus" AS ENUM ('SCHEDULED', 'SENT', 'FAILED', 'CANCELED');
 
 -- CreateTable
 CREATE TABLE "Flower" (
@@ -14,7 +11,8 @@ CREATE TABLE "Flower" (
     "meaning" TEXT NOT NULL,
     "position" TEXT NOT NULL,
     "sortOrder" INTEGER NOT NULL,
-    "pricePerStem" INTEGER NOT NULL,
+    "category" TEXT NOT NULL DEFAULT 'main',
+    "pricePerStem" INTEGER NOT NULL DEFAULT 0,
     "active" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -37,66 +35,44 @@ CREATE TABLE "WrapColor" (
 );
 
 -- CreateTable
-CREATE TABLE "Customer" (
+CREATE TABLE "Gift" (
     "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
-    "phone" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Customer_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Order" (
-    "id" SERIAL NOT NULL,
-    "orderNumber" TEXT NOT NULL,
-    "customerId" TEXT NOT NULL,
+    "senderName" TEXT NOT NULL,
+    "senderEmail" TEXT NOT NULL,
     "recipientName" TEXT NOT NULL,
-    "recipientPhone" TEXT NOT NULL,
-    "deliveryAddress" TEXT NOT NULL,
-    "deliveryDate" TIMESTAMP(3) NOT NULL,
-    "deliveryTimeSlot" TEXT NOT NULL,
-    "giftNoteRecipient" TEXT NOT NULL,
-    "giftNoteMessage" TEXT NOT NULL,
-    "giftNoteFrom" TEXT NOT NULL,
-    "paymentMethod" "PaymentMethod" NOT NULL,
-    "status" "OrderStatus" NOT NULL DEFAULT 'PENDING_PAYMENT',
-    "subtotalCents" INTEGER NOT NULL,
+    "recipientEmail" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "fromName" TEXT NOT NULL,
+    "stemCount" INTEGER NOT NULL,
+    "imageData" BYTEA NOT NULL,
+    "imageMime" TEXT NOT NULL DEFAULT 'image/jpeg',
+    "scheduledAt" TIMESTAMP(3) NOT NULL,
+    "status" "GiftStatus" NOT NULL DEFAULT 'SCHEDULED',
+    "sentAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Gift_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Bouquet" (
+CREATE TABLE "GiftFlower" (
     "id" TEXT NOT NULL,
-    "orderId" INTEGER NOT NULL,
-    "stemCount" INTEGER NOT NULL,
-
-    CONSTRAINT "Bouquet_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "BouquetFlower" (
-    "id" TEXT NOT NULL,
-    "bouquetId" TEXT NOT NULL,
+    "giftId" TEXT NOT NULL,
     "flowerId" TEXT NOT NULL,
     "stemCount" INTEGER NOT NULL,
 
-    CONSTRAINT "BouquetFlower_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "GiftFlower_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "BouquetWrap" (
+CREATE TABLE "GiftWrap" (
     "id" TEXT NOT NULL,
-    "bouquetId" TEXT NOT NULL,
+    "giftId" TEXT NOT NULL,
     "wrapColorId" TEXT NOT NULL,
     "position" INTEGER NOT NULL,
 
-    CONSTRAINT "BouquetWrap_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "GiftWrap_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -112,35 +88,23 @@ CREATE UNIQUE INDEX "WrapColor_name_key" ON "WrapColor"("name");
 CREATE UNIQUE INDEX "WrapColor_sortOrder_key" ON "WrapColor"("sortOrder");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Customer_email_key" ON "Customer"("email");
+CREATE INDEX "Gift_status_scheduledAt_idx" ON "Gift"("status", "scheduledAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Order_orderNumber_key" ON "Order"("orderNumber");
+CREATE UNIQUE INDEX "GiftFlower_giftId_flowerId_key" ON "GiftFlower"("giftId", "flowerId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Bouquet_orderId_key" ON "Bouquet"("orderId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "BouquetFlower_bouquetId_flowerId_key" ON "BouquetFlower"("bouquetId", "flowerId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "BouquetWrap_bouquetId_wrapColorId_key" ON "BouquetWrap"("bouquetId", "wrapColorId");
+CREATE UNIQUE INDEX "GiftWrap_giftId_wrapColorId_key" ON "GiftWrap"("giftId", "wrapColorId");
 
 -- AddForeignKey
-ALTER TABLE "Order" ADD CONSTRAINT "Order_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "GiftFlower" ADD CONSTRAINT "GiftFlower_giftId_fkey" FOREIGN KEY ("giftId") REFERENCES "Gift"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Bouquet" ADD CONSTRAINT "Bouquet_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "GiftFlower" ADD CONSTRAINT "GiftFlower_flowerId_fkey" FOREIGN KEY ("flowerId") REFERENCES "Flower"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "BouquetFlower" ADD CONSTRAINT "BouquetFlower_bouquetId_fkey" FOREIGN KEY ("bouquetId") REFERENCES "Bouquet"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "GiftWrap" ADD CONSTRAINT "GiftWrap_giftId_fkey" FOREIGN KEY ("giftId") REFERENCES "Gift"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "BouquetFlower" ADD CONSTRAINT "BouquetFlower_flowerId_fkey" FOREIGN KEY ("flowerId") REFERENCES "Flower"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "BouquetWrap" ADD CONSTRAINT "BouquetWrap_bouquetId_fkey" FOREIGN KEY ("bouquetId") REFERENCES "Bouquet"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "BouquetWrap" ADD CONSTRAINT "BouquetWrap_wrapColorId_fkey" FOREIGN KEY ("wrapColorId") REFERENCES "WrapColor"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "GiftWrap" ADD CONSTRAINT "GiftWrap_wrapColorId_fkey" FOREIGN KEY ("wrapColorId") REFERENCES "WrapColor"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
