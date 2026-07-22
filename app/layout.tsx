@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "The Perfect Bouquet",
-  description: "A little garden made with love — find your perfect bouquet.",
+  description: "Build a bouquet, write a letter, and send it to someone you love — delivered to their inbox at the perfect moment.",
   other: {
     "codex-preview": "development",
   },

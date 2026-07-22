@@ -186,6 +186,7 @@ h1 em {
   letter-spacing: .08em;
   text-transform: uppercase;
   box-shadow: 0 14px 30px rgba(57,66,47,.17);
+  white-space: nowrap;
   opacity: 0;
   animation: copy-rise .9s 1.18s ease-out forwards;
   transition: transform .28s ease, background .28s ease, box-shadow .28s ease;

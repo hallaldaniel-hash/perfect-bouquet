@@ -9,28 +9,28 @@ export default function Home() {
           <span className="monogram-flower">✿</span>
           <span>b</span>
         </a>
-        <p className="tiny-note">made with love, just for you</p>
+        <p className="tiny-note">made with love, sent with feeling</p>
       </header>
 
       <section className="hero" id="top" aria-labelledby="hero-title">
         <div className="hero-copy">
           <p className="eyebrow">
             <span className="eyebrow-line" />
-            A little garden made for you
+            A little garden, for anyone you love
           </p>
 
           <h1 id="hero-title">
             <span>The perfect bouquet</span>
-            <em>for the perfect girl</em>
+            <em>for someone you love</em>
           </h1>
 
           <p className="intro">
-            Every flower has a feeling. Let&apos;s find the ones that feel
-            exactly like you.
+            Every flower carries a feeling. Build a bouquet that says what you
+            mean — then send it to someone who should hear it.
           </p>
 
           <a className="quiz-button" href="/quiz">
-            <span>Take the quiz</span>
+            <span>Make the Perfect Bouquet</span>
             <span className="button-arrow" aria-hidden="true">↗</span>
           </a>
 

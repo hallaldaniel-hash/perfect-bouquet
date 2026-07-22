@@ -128,7 +128,17 @@
 #flower-count::-moz-range-progress { height: 2px; background: #596348; }
 #flower-count::-moz-range-thumb { width: 10px; height: 10px; border: 7px solid #f4efe5; border-radius: 50%; background: #596348; box-shadow: 0 0 0 1px #596348; }
 .range-labels { display: flex; justify-content: space-between; color: #94998b; font-family: "Cormorant Garamond", serif; font-size: 13px; font-style: italic; }
-.odd-note { margin: 20px 0 0; text-align: center; color: #a2a597; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; }
+.odd-note { margin: 24px auto 0; max-width: 620px; text-align: center; }
+.odd-note-label { margin: 0 0 9px; color: #a2a597; font-size: 8px; letter-spacing: .18em; text-transform: uppercase; }
+.odd-note-detail {
+  margin: 0;
+  color: #8a907e;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 16px;
+  font-style: italic;
+  line-height: 1.5;
+}
+.odd-note-detail em { color: #a27670; font-style: italic; }
 
 .flower-grid {
   display: grid;
@@ -614,7 +624,11 @@
   .bouquet-result { padding: 75px 15px 50px; }
   .created-bouquet { min-height: 500px; margin: 0 -25px; transform: scale(.92); }
   .bouquet-bloom { border-width: 3px; }
-  .love-note { padding: 45px 33px; margin-top: -55px; transform: rotate(.5deg); }
+  .love-note { padding: 45px 33px; transform: rotate(.5deg); }
+  /* The overlap pull-up belongs only to the result layout, not the note-writing
+     preview (04) or the summary cards — otherwise the card covers the fields. */
+  .result-layout .love-note { margin-top: -55px; }
+  .note-preview { margin-top: 8px; }
   .ai-bouquet-frame { padding: 9px; }
   .ai-bouquet-frame img { min-height: 460px; }
   .ai-bouquet-label { left: 22px; bottom: 22px; }

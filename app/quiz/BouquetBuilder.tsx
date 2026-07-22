@@ -248,7 +248,7 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
         </Link>
         <div>
           <p>THE PERFECT BOUQUET</p>
-          <span>made with love, just for you</span>
+          <span>made with love, sent with feeling</span>
         </div>
         <Link className="back-link" href="/">← Back</Link>
       </header>
@@ -278,12 +278,19 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
           />
           <div className="range-labels"><span>one sweet bloom</span><span>a grand gesture</span></div>
         </div>
-        <p className="odd-note">Only odd numbers—for a bouquet that always feels naturally balanced.</p>
+        <div className="odd-note">
+          <p className="odd-note-label">Always an odd number</p>
+          <p className="odd-note-detail">
+            It&apos;s an old tradition: across much of Eastern Europe, Russia, and Poland,
+            an <em>even</em> number of flowers is kept for mourning and farewells — so
+            <em> odd</em>-numbered bouquets are the ones given for joy, love, and celebration.
+          </p>
+        </div>
       </section>
 
       <section className="choice-section" aria-labelledby="flowers-title">
         <div className="section-heading">
-          <div><span>02</span><h2 id="flowers-title">Pick her flowers</h2></div>
+          <div><span>02</span><h2 id="flowers-title">Pick the flowers</h2></div>
           <p>{selectedFlowers.length} {selectedFlowers.length === 1 ? "variety" : "varieties"} selected</p>
         </div>
         <div className="flower-grid">
@@ -338,7 +345,7 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
 
       <section className="choice-section note-section" aria-labelledby="note-title" ref={noteRef}>
         <div className="section-heading">
-          <div><span>04</span><h2 id="note-title">Write her card</h2></div>
+          <div><span>04</span><h2 id="note-title">Write the card</h2></div>
           <p>Tucked in with the flowers</p>
         </div>
         <div className="note-layout">
@@ -350,7 +357,7 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
                 className="field-input"
                 value={recipientName}
                 maxLength={80}
-                placeholder="Her name"
+                placeholder="Their name"
                 onChange={(event) => setRecipientName(event.target.value)}
               />
             </label>
