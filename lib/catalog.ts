@@ -6,7 +6,10 @@ export interface CatalogFlower {
   id: string;
   name: string;
   meaning: string;
+  /** Full card artwork. The bouquet canvas composites from this. */
   image: string;
+  /** Bloom-focused square crop, used only by the picker grid. */
+  thumb: string;
   category: string;
 }
 
@@ -50,5 +53,16 @@ export async function getCatalog(): Promise<Catalog> {
     }),
   ]);
 
-  return { flowers, wraps };
+  // The thumbnail lives alongside the artwork under /thumbs (as WebP, since the
+  // picker loads all of them at once), so it's derived rather than stored — no
+  // migration needed to add or regenerate them.
+  return {
+    flowers: flowers.map((flower) => ({
+      ...flower,
+      thumb: flower.image
+        .replace("/flowers/", "/flowers/thumbs/")
+        .replace(/\.png$/, ".webp"),
+    })),
+    wraps,
+  };
 }

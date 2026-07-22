@@ -339,7 +339,7 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
                     >
                       <span
                         className="flower-image"
-                        style={{ backgroundImage: `url(${flower.image})` }}
+                        style={{ backgroundImage: `url(${flower.thumb})` }}
                       />
                       <span className="flower-meta">
                         <strong>{flower.name}</strong>
