@@ -1,7 +1,11 @@
+import { PetalField } from "@/components/PetalField";
+import { HeroEnhancements } from "@/components/HeroEnhancements";
+
 export default function Home() {
   return (
     <main className="landing-shell">
       <div className="grain" aria-hidden="true" />
+      <HeroEnhancements />
 
       <header className="site-header">
         <a className="monogram" href="#top" aria-label="Perfect Bouquet home">
@@ -41,6 +45,7 @@ export default function Home() {
         </div>
 
         <div className="garden" aria-label="A bouquet blooming into view">
+          <PetalField />
           <div className="sun-wash" aria-hidden="true" />
           <span className="botanical-name name-one" aria-hidden="true">
             garden rose
