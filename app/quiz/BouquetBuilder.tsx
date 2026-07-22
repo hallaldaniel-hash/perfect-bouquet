@@ -9,6 +9,15 @@ import SendGiftView, { type GiftBouquet } from "./SendGiftView";
 
 const GIFT_NOTE_MAX = 600;
 
+// Groups the (much larger) flower catalog into readable sections. Order here is
+// the order they appear in the picker.
+const FLOWER_GROUPS = [
+  { category: "main", label: "Feature flowers" },
+  { category: "decorative", label: "Accents" },
+  { category: "filler", label: "Fillers" },
+  { category: "greenery", label: "Greenery" },
+] as const;
+
 interface BouquetBuilderProps {
   flowers: CatalogFlower[];
   wraps: CatalogWrap[];
@@ -61,17 +70,23 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function loadFlowerAtlas() {
+  function loadImage(src: string) {
     return new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
       image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error("The flower reference could not be loaded."));
-      image.src = "/flower-selector-atlas.png";
+      image.onerror = () => reject(new Error("A flower image could not be loaded."));
+      image.src = src;
     });
   }
 
   async function buildReferenceImage() {
-    const atlas = await loadFlowerAtlas();
+    // Load just the artwork for the flowers actually chosen, keyed by their
+    // catalog index so the layout loop can look each one up.
+    const chosen = await Promise.all(
+      selectedFlowers.map(async (index) => [index, await loadImage(flowers[index].image)] as const),
+    );
+    const artwork = new Map<number, HTMLImageElement>(chosen);
+
     const canvas = document.createElement("canvas");
     canvas.width = 1024;
     canvas.height = 1024;
@@ -120,25 +135,28 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
       const centerX = 512 + Math.cos(angle) * radius;
       const centerY = 420 + Math.sin(angle) * radius * .66;
       const size = Math.max(104, 174 - count * 2.4) + ((index * 11) % 22);
-      const column = flowerIndex % 5;
-      const row = Math.floor(flowerIndex / 5);
-      const sourceWidth = atlas.naturalWidth / 5;
-      const sourceHeight = atlas.naturalHeight / 2;
+      const source = artwork.get(flowerIndex);
+      if (!source) return;
+
+      // Take a square from the upper part of the artwork — that's the bloom
+      // itself, above the stem — and drop it into a circular mask.
+      const crop = Math.min(source.naturalWidth, source.naturalHeight * 0.82);
+      const cropX = (source.naturalWidth - crop) / 2;
 
       context.save();
       context.beginPath();
       context.arc(centerX, centerY, size / 2, 0, Math.PI * 2);
       context.clip();
       context.drawImage(
-        atlas,
-        column * sourceWidth,
-        row * sourceHeight,
-        sourceWidth,
-        sourceHeight * .78,
+        source,
+        cropX,
+        0,
+        crop,
+        crop,
         centerX - size / 2,
         centerY - size / 2,
         size,
-        size * 1.18,
+        size,
       );
       context.restore();
     });
@@ -293,27 +311,41 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
           <div><span>02</span><h2 id="flowers-title">Pick the flowers</h2></div>
           <p>{selectedFlowers.length} {selectedFlowers.length === 1 ? "variety" : "varieties"} selected</p>
         </div>
-        <div className="flower-grid">
-          {flowers.map((flower, index) => {
-            const selected = selectedFlowers.includes(index);
-            return (
-              <button
-                type="button"
-                className={`flower-card ${selected ? "selected" : ""}`}
-                key={flower.name}
-                onClick={() => toggleFlower(index)}
-                aria-pressed={selected}
-              >
-                <span className="flower-image" style={{ backgroundPosition: flower.position }} />
-                <span className="flower-meta">
-                  <strong>{flower.name}</strong>
-                  <small>{flower.meaning}</small>
-                </span>
-                <span className="select-mark" aria-hidden="true">{selected ? "✓" : "+"}</span>
-              </button>
-            );
-          })}
-        </div>
+        {FLOWER_GROUPS.map((group) => {
+          const entries = flowers
+            .map((flower, index) => ({ flower, index }))
+            .filter(({ flower }) => flower.category === group.category);
+          if (entries.length === 0) return null;
+          return (
+            <div className="flower-group" key={group.category}>
+              <p className="flower-group-label">{group.label}</p>
+              <div className="flower-grid">
+                {entries.map(({ flower, index }) => {
+                  const selected = selectedFlowers.includes(index);
+                  return (
+                    <button
+                      type="button"
+                      className={`flower-card ${selected ? "selected" : ""}`}
+                      key={flower.id}
+                      onClick={() => toggleFlower(index)}
+                      aria-pressed={selected}
+                    >
+                      <span
+                        className="flower-image"
+                        style={{ backgroundImage: `url(${flower.image})` }}
+                      />
+                      <span className="flower-meta">
+                        <strong>{flower.name}</strong>
+                        <small>{flower.meaning}</small>
+                      </span>
+                      <span className="select-mark" aria-hidden="true">{selected ? "✓" : "+"}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </section>
 
       <section className="choice-section wrap-section" aria-labelledby="wraps-title">

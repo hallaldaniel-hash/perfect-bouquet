@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { flowerCatalog } from "@/prisma/flowerData";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const recentRequests = new Map<string, number>();
-const ALLOWED_FLOWERS = new Set([
-  "Garden Rose",
-  "Blush Peony",
-  "Pink Tulip",
-  "White Lily",
-  "Ranunculus",
-  "White Orchid",
-  "Delphinium",
-  "Sweet Pea",
-  "Anemone",
-  "Baby’s Breath",
-]);
+// Built from the same catalog the database is seeded from, so adding a flower
+// in one place can never leave this allowlist behind.
+const ALLOWED_FLOWERS = new Set(flowerCatalog.map((flower) => flower.name));
 
 const ALLOWED_WRAPS = new Set([
   "Warm Ivory",

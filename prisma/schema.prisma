@@ -11,10 +11,10 @@ model Flower {
   id           String       @id @default(cuid())
   name         String       @unique
   meaning      String
-  // CSS background-position into the sprite atlas for the selector grid.
-  position     String
-  // Preserves catalog order; the builder maps a flower's index onto the atlas
-  // sprite cell, so ordering must stay stable.
+  // Public path to this flower's artwork, e.g. /flowers/white-rose.png.
+  // Swap the file to swap the artwork; nothing else needs to change.
+  image        String
+  // Catalog display order (matches the source contact sheet reading order).
   sortOrder    Int          @unique
   // main | decorative | filler | greenery — groups the selector. Colour variants
   // (White Rose, Pink Rose, ...) are just separate rows sharing a category.

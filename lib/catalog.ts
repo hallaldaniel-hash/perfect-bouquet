@@ -6,7 +6,7 @@ export interface CatalogFlower {
   id: string;
   name: string;
   meaning: string;
-  position: string;
+  image: string;
   category: string;
 }
 
@@ -35,7 +35,7 @@ export async function getCatalog(): Promise<Catalog> {
         id: true,
         name: true,
         meaning: true,
-        position: true,
+        image: true,
         category: true,
       },
     }),

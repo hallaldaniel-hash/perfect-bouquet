@@ -9,7 +9,7 @@ CREATE TABLE "Flower" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "meaning" TEXT NOT NULL,
-    "position" TEXT NOT NULL,
+    "image" TEXT NOT NULL,
     "sortOrder" INTEGER NOT NULL,
     "category" TEXT NOT NULL DEFAULT 'main',
     "pricePerStem" INTEGER NOT NULL DEFAULT 0,

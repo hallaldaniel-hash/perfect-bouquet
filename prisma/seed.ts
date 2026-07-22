@@ -1,50 +1,50 @@
 import "dotenv/config";
 import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { flowerCatalog, flowerImagePath } from "./flowerData";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
-// Order matches the original hardcoded arrays in BouquetBuilder.tsx; the index
-// becomes sortOrder and drives the atlas sprite cell, so do not reorder.
-// category groups the selector (main | decorative | filler | greenery). This is
-// the current 10-flower set; the larger catalog is added in a later phase.
-const flowers = [
-  { name: "Garden Rose", meaning: "devotion", position: "0% 0%", category: "main" },
-  { name: "Blush Peony", meaning: "happy love", position: "25% 0%", category: "main" },
-  { name: "Pink Tulip", meaning: "affection", position: "50% 0%", category: "main" },
-  { name: "White Lily", meaning: "pure love", position: "75% 0%", category: "main" },
-  { name: "Ranunculus", meaning: "radiance", position: "100% 0%", category: "main" },
-  { name: "White Orchid", meaning: "rare beauty", position: "0% 100%", category: "main" },
-  { name: "Delphinium", meaning: "big heart", position: "25% 100%", category: "decorative" },
-  { name: "Sweet Pea", meaning: "sweetness", position: "50% 100%", category: "decorative" },
-  { name: "Anemone", meaning: "anticipation", position: "75% 100%", category: "decorative" },
-  { name: "Baby’s Breath", meaning: "everlasting love", position: "100% 100%", category: "filler" },
-];
-
-// priceModifier is a flat cents surcharge added once per bouquet for that wrap color.
+// Wrap colors the bouquet can be dressed in.
 const wraps = [
-  { name: "Warm Ivory", color: "#eee5d6", priceModifier: 0 },
-  { name: "Blush Pink", color: "#d9aca5", priceModifier: 0 },
-  { name: "Botanical Olive", color: "#596348", priceModifier: 0 },
-  { name: "Sage Green", color: "#9da88a", priceModifier: 0 },
-  { name: "Dusty Blue", color: "#8fa6ad", priceModifier: 200 },
-  { name: "Soft Lilac", color: "#b8a6c2", priceModifier: 200 },
-  { name: "Champagne", color: "#cdbb94", priceModifier: 300 },
-  { name: "Deep Burgundy", color: "#6d293a", priceModifier: 300 },
-  { name: "Natural Kraft", color: "#ad865c", priceModifier: 0 },
-  { name: "Midnight", color: "#28333a", priceModifier: 300 },
+  { name: "Warm Ivory", color: "#eee5d6" },
+  { name: "Blush Pink", color: "#d9aca5" },
+  { name: "Botanical Olive", color: "#596348" },
+  { name: "Sage Green", color: "#9da88a" },
+  { name: "Dusty Blue", color: "#8fa6ad" },
+  { name: "Soft Lilac", color: "#b8a6c2" },
+  { name: "Champagne", color: "#cdbb94" },
+  { name: "Deep Burgundy", color: "#6d293a" },
+  { name: "Natural Kraft", color: "#ad865c" },
+  { name: "Midnight", color: "#28333a" },
 ];
 
 async function main() {
-  for (const [index, flower] of flowers.entries()) {
-    const data = { ...flower, sortOrder: index };
+  // Flowers come from prisma/flowerData.ts, the same list the slicing script
+  // uses, so names, categories and image files can never drift apart.
+  for (const [index, flower] of flowerCatalog.entries()) {
+    const data = {
+      name: flower.name,
+      meaning: flower.meaning,
+      category: flower.category,
+      image: flowerImagePath(flower.slug),
+      sortOrder: index,
+    };
     await prisma.flower.upsert({
       where: { name: flower.name },
       update: data,
       create: data,
     });
   }
+
+  // Anything no longer in the catalog (e.g. the old 10-flower set) is retired
+  // rather than deleted, so past gifts that reference it still resolve.
+  const names = flowerCatalog.map((flower) => flower.name);
+  const retired = await prisma.flower.updateMany({
+    where: { name: { notIn: names }, active: true },
+    data: { active: false },
+  });
 
   for (const [index, wrap] of wraps.entries()) {
     const data = { ...wrap, sortOrder: index };
@@ -55,7 +55,10 @@ async function main() {
     });
   }
 
-  console.log(`Seeded ${flowers.length} flowers and ${wraps.length} wrap colors.`);
+  console.log(
+    `Seeded ${flowerCatalog.length} flowers and ${wraps.length} wrap colors` +
+      (retired.count ? `; retired ${retired.count} old flower(s).` : "."),
+  );
 }
 
 main()

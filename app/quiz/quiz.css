@@ -162,10 +162,25 @@
   width: 100%;
   aspect-ratio: .9;
   margin-bottom: 16px;
-  background-image: url('/flower-selector-atlas.png');
+  /* background-image is set per flower from the catalog */
   background-repeat: no-repeat;
-  background-size: 500% auto;
-  filter: saturate(.86) contrast(.96);
+  background-size: cover;
+  background-position: center top;
+  background-color: #fbf8f1;
+  filter: saturate(.92) contrast(.97);
+}
+
+.flower-group { margin-bottom: 46px; }
+.flower-group:last-child { margin-bottom: 0; }
+.flower-group-label {
+  margin: 0 0 16px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba(79,88,64,.16);
+  color: #a27670;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: .22em;
+  text-transform: uppercase;
 }
 .flower-meta { display: flex; flex-direction: column; padding: 0 16px; }
 .flower-meta strong { font-family: "Cormorant Garamond", serif; font-size: 18px; font-weight: 500; }
