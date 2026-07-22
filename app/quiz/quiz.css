@@ -128,17 +128,16 @@
 #flower-count::-moz-range-progress { height: 2px; background: #596348; }
 #flower-count::-moz-range-thumb { width: 10px; height: 10px; border: 7px solid #f4efe5; border-radius: 50%; background: #596348; box-shadow: 0 0 0 1px #596348; }
 .range-labels { display: flex; justify-content: space-between; color: #94998b; font-family: "Cormorant Garamond", serif; font-size: 13px; font-style: italic; }
-.odd-note { margin: 24px auto 0; max-width: 620px; text-align: center; }
-.odd-note-label { margin: 0 0 9px; color: #a2a597; font-size: 8px; letter-spacing: .18em; text-transform: uppercase; }
-.odd-note-detail {
-  margin: 0;
-  color: #8a907e;
+.odd-note {
+  margin: 22px auto 0;
+  max-width: 480px;
+  text-align: center;
+  color: #9a9f8f;
   font-family: "Cormorant Garamond", serif;
-  font-size: 16px;
+  font-size: 15px;
   font-style: italic;
   line-height: 1.5;
 }
-.odd-note-detail em { color: #a27670; font-style: italic; }
 
 .flower-grid {
   display: grid;
@@ -334,7 +333,57 @@
 }
 .generate-button:hover { transform: translateY(-3px); background: #39422f; }
 .generate-button:disabled { cursor: wait; opacity: .76; transform: none; }
+/* Waiting on the user to choose, rather than on us — read as "not yet". */
+.generate-button:disabled:not([data-generating]) { cursor: not-allowed; }
+.generate-button:disabled:hover { transform: none; background: #4f5840; }
 .generate-button b { width: 43px; height: 43px; border-radius: 50%; background: #f4efe5; color: #b77f79; display: grid; place-items: center; font-size: 16px; }
+
+.selection-hint {
+  margin-top: 9px;
+  color: #8a7a63;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 15px;
+  font-style: italic;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* A small flower that opens, holds, and closes — loops while generating. */
+.bloom-loader {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+.bloom-loader::before,
+.bloom-loader::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 100%;
+  height: 100%;
+  border-radius: 50% 0 50% 0;
+  background: currentColor;
+}
+.bloom-loader::before { animation: bloom-open 1.6s ease-in-out infinite; }
+/* Offset petal pair — its own keyframes so the 45deg base tilt survives the
+   animation (a shared `transform` keyframe would otherwise overwrite it). */
+.bloom-loader::after { opacity: .55; animation: bloom-open-offset 1.6s ease-in-out infinite; animation-delay: .2s; }
+
+@keyframes bloom-open {
+  0%, 100% { transform: scale(.25) rotate(0deg); opacity: .45; }
+  50% { transform: scale(1) rotate(90deg); opacity: 1; }
+}
+@keyframes bloom-open-offset {
+  0%, 100% { transform: scale(.25) rotate(45deg); opacity: .25; }
+  50% { transform: scale(1) rotate(135deg); opacity: .6; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bloom-loader::before { animation: none; transform: scale(.9); }
+  .bloom-loader::after { animation: none; transform: scale(.9) rotate(45deg); }
+}
 
 .bouquet-result {
   position: relative;
@@ -613,7 +662,11 @@
   .checkout-summary { position: static; order: -1; }
   .summary-note { display: none; }
   .created-bouquet { min-height: 590px; }
-  .love-note { max-width: 550px; margin: -35px auto 0; }
+  .love-note { max-width: 550px; margin: 0 auto; }
+  /* The pull-up overlap belongs only to the result layout, where the card is
+     meant to tuck under the bouquet image — never to the note-writing preview
+     (04), where it would ride up over the "Signed" field. */
+  .result-layout .love-note { margin-top: -35px; }
   .ai-bouquet-frame { max-width: 620px; margin: 0 auto; }
 }
 
@@ -644,7 +697,11 @@
   /* The overlap pull-up belongs only to the result layout, not the note-writing
      preview (04) or the summary cards — otherwise the card covers the fields. */
   .result-layout .love-note { margin-top: -55px; }
-  .note-preview { margin-top: 8px; }
+  /* Clear breathing room between the fields and the live letter preview. */
+  .note-preview { margin-top: 34px; }
+  .note-layout { gap: 34px; }
+  /* And between the generated bouquet and the letter beneath it. */
+  .result-layout { gap: 46px; }
   .ai-bouquet-frame { padding: 9px; }
   .ai-bouquet-frame img { min-height: 460px; }
   .ai-bouquet-label { left: 22px; bottom: 22px; }

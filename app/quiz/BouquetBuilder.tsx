@@ -25,8 +25,9 @@ interface BouquetBuilderProps {
 
 export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) {
   const [count, setCount] = useState(15);
-  const [selectedFlowers, setSelectedFlowers] = useState([0, 1, 4]);
-  const [selectedWraps, setSelectedWraps] = useState([0]);
+  // Nothing is chosen up front — the bouquet should be entirely the sender's.
+  const [selectedFlowers, setSelectedFlowers] = useState<number[]>([]);
+  const [selectedWraps, setSelectedWraps] = useState<number[]>([]);
   const [recipientName, setRecipientName] = useState("");
   const [giftMessage, setGiftMessage] = useState("");
   const [fromName, setFromName] = useState("");
@@ -172,25 +173,38 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
 
   function toggleFlower(index: number) {
     setGenerated(false);
-    setSelectedFlowers((current) => {
-      if (current.includes(index)) {
-        return current.length === 1 ? current : current.filter((item) => item !== index);
-      }
-      return [...current, index];
-    });
+    setSelectedFlowers((current) =>
+      current.includes(index)
+        ? current.filter((item) => item !== index)
+        : [...current, index],
+    );
   }
 
   function toggleWrap(index: number) {
     setGenerated(false);
     setSelectedWraps((current) => {
-      if (current.includes(index)) {
-        return current.length === 1 ? current : current.filter((item) => item !== index);
-      }
+      if (current.includes(index)) return current.filter((item) => item !== index);
+      // At most two wraps; picking a third replaces the older of the two.
       return current.length === 2 ? [current[1], index] : [...current, index];
     });
   }
 
+  // Both choices are required before a bouquet can be grown. The button is
+  // disabled until then, so the hint is shown proactively rather than on click
+  // (a disabled button never fires onClick).
+  const missingFlowers = selectedFlowers.length === 0;
+  const missingWraps = selectedWraps.length === 0;
+  const canGenerate = !missingFlowers && !missingWraps;
+  const selectionHint = canGenerate
+    ? ""
+    : missingFlowers && missingWraps
+      ? "Choose your flowers and a wrap to begin."
+      : missingFlowers
+        ? "Choose at least one flower to begin."
+        : "Choose a wrap to finish your bouquet.";
+
   async function generateBouquet() {
+    if (!canGenerate) return;
     setGenerating(true);
     setGenerationError("");
     setGenerated(false);
@@ -296,14 +310,7 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
           />
           <div className="range-labels"><span>one sweet bloom</span><span>a grand gesture</span></div>
         </div>
-        <div className="odd-note">
-          <p className="odd-note-label">Always an odd number</p>
-          <p className="odd-note-detail">
-            It&apos;s an old tradition: across much of Eastern Europe, Russia, and Poland,
-            an <em>even</em> number of flowers is kept for mourning and farewells — so
-            <em> odd</em>-numbered bouquets are the ones given for joy, love, and celebration.
-          </p>
-        </div>
+        <p className="odd-note">Odd blooms only — an old tradition for luck, love and happy things.</p>
       </section>
 
       <section className="choice-section" aria-labelledby="flowers-title">
@@ -429,11 +436,26 @@ export default function BouquetBuilder({ flowers, wraps }: BouquetBuilderProps) 
 
       <div className="generate-row">
         <div className="generate-summary">
-          <p>{count} blooms · {selectedFlowers.length} flower types · {selectedWraps.length} wrap {selectedWraps.length === 1 ? "color" : "colors"}</p>
+          <p>
+            {count} blooms · {selectedFlowers.length || "no"} flower {selectedFlowers.length === 1 ? "type" : "types"}
+            {" · "}
+            {selectedWraps.length || "no"} wrap {selectedWraps.length === 1 ? "color" : "colors"}
+          </p>
+          {selectionHint && <p className="selection-hint" role="status">{selectionHint}</p>}
           {generationError && <p className="generation-error" role="alert">{generationError}</p>}
         </div>
-        <button type="button" className="generate-button" onClick={generateBouquet} disabled={generating}>
-          <span>{generating ? "Growing your bouquet…" : "Make my bouquet"}</span><b aria-hidden="true">{generating ? "···" : "✿"}</b>
+        <button
+          type="button"
+          className="generate-button"
+          onClick={generateBouquet}
+          disabled={generating || !canGenerate}
+          aria-disabled={generating || !canGenerate}
+          data-generating={generating ? "true" : undefined}
+        >
+          <span>{generating ? "Growing your bouquet…" : "Make my bouquet"}</span>
+          <b aria-hidden="true">
+            {generating ? <i className="bloom-loader" /> : "✿"}
+          </b>
         </button>
       </div>
 
