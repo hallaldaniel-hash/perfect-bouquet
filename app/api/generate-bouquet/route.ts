@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { flowerCatalog } from "@/prisma/flowerData";
+import { normalizeReferenceImage, ReferenceImageError } from "@/lib/referenceImages";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -135,6 +136,22 @@ export async function POST(request: NextRequest) {
 
   const prompt = `STRICT REFERENCE-BASED IMAGE EDIT. Preserve the exact restrained bouquet blueprint and obey this JSON production specification:\n${JSON.stringify(specification)}`;
 
+  let blueprint;
+  try {
+    // Defense in depth: normalise the blueprint server-side so an out-of-spec
+    // reference (wrong format, mis-oriented, or over Cloudflare's sub-512 limit)
+    // can never reach the model and silently drop image conditioning.
+    blueprint = await normalizeReferenceImage(referenceBytes);
+  } catch (error) {
+    if (error instanceof ReferenceImageError) {
+      return NextResponse.json(
+        { error: "The bouquet reference could not be prepared." },
+        { status: 400 },
+      );
+    }
+    throw error;
+  }
+
   try {
     const form = new FormData();
     form.append("prompt", prompt);
@@ -146,7 +163,7 @@ export async function POST(request: NextRequest) {
     // differently-named field is not recognized as a reference image at all,
     // which silently turns this into a text-to-image-only request.
     // https://developers.cloudflare.com/changelog/post/2025-11-25-flux-2-dev-workers-ai/
-    form.append("input_image_0", new Blob([referenceBytes], { type: "image/jpeg" }), "bouquet-blueprint.jpg");
+    form.append("input_image_0", new Blob([new Uint8Array(blueprint.bytes)], { type: "image/jpeg" }), "bouquet-blueprint.jpg");
 
     const cloudflareResponse = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/black-forest-labs/flux-2-dev`,

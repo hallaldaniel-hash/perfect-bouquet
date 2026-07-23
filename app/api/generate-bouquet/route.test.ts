@@ -1,17 +1,28 @@
-// Focused regression test for the input_image -> input_image_0 transport fix.
+// Regression test for the input_image -> input_image_0 transport fix, plus the
+// server-side blueprint normalisation added alongside it.
 //
-// Proves what the fix commit claims and nothing more: the outgoing Cloudflare
-// multipart request carries the reference image under input_image_0, never
-// under the old input_image name, and every other field (prompt text, blob
-// bytes, MIME type, width/height/steps) is unchanged by the fix.
+// Proves: the outgoing Cloudflare multipart request carries the reference image
+// under input_image_0 (never the old input_image name), the prompt/width/height/
+// steps fields are intact, and the blueprint is normalised to a valid JPEG that
+// is within Cloudflare's sub-512 reference-image limit before it is sent.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import sharp from "sharp";
 import { NextRequest } from "next/server";
 import { POST } from "./route";
+import { MAX_REFERENCE_DIMENSION } from "@/lib/generationConfig";
 
-const REFERENCE_BYTES = Buffer.from("fake-blueprint-jpeg-bytes-for-test");
-const REFERENCE_IMAGE = `data:image/jpeg;base64,${REFERENCE_BYTES.toString("base64")}`;
+// A real JPEG larger than the reference limit, so the route must actually
+// decode and downscale it — arbitrary bytes would be rejected by sharp.
+async function makeBlueprintDataUrl(): Promise<string> {
+  const bytes = await sharp({
+    create: { width: 1024, height: 1024, channels: 3, background: { r: 240, g: 230, b: 220 } },
+  })
+    .jpeg()
+    .toBuffer();
+  return `data:image/jpeg;base64,${bytes.toString("base64")}`;
+}
 
 function cloudflareSuccessResponse() {
   const fakeResultImage = Buffer.from("fake-output-jpeg-bytes").toString("base64");
@@ -21,7 +32,7 @@ function cloudflareSuccessResponse() {
   });
 }
 
-test("POST sends the reference image as input_image_0, not input_image, preserving every other field", async () => {
+test("POST sends the blueprint as input_image_0, normalised within the reference limit, preserving every other field", async () => {
   process.env.CLOUDFLARE_ACCOUNT_ID = "test-account";
   process.env.CLOUDFLARE_API_TOKEN = "test-token";
 
@@ -41,7 +52,7 @@ test("POST sends the reference image as input_image_0, not input_image, preservi
         count: 3,
         flowers: ["White Rose"],
         wraps: ["Warm Ivory"],
-        referenceImage: REFERENCE_IMAGE,
+        referenceImage: await makeBlueprintDataUrl(),
       }),
     });
 
@@ -55,7 +66,7 @@ test("POST sends the reference image as input_image_0, not input_image, preservi
     assert.ok(form.has("input_image_0"), "expected input_image_0 field to be present");
     assert.ok(!form.has("input_image"), "expected the old input_image field to be absent");
 
-    // Everything else must be untouched by the fix.
+    // Everything else must be untouched.
     assert.equal(form.get("width"), "1024");
     assert.equal(form.get("height"), "1024");
     assert.equal(form.get("steps"), "8");
@@ -65,10 +76,14 @@ test("POST sends the reference image as input_image_0, not input_image, preservi
     assert.ok((prompt as string).includes("White Rose"));
     assert.ok((prompt as string).includes("Warm Ivory"));
 
+    // The blueprint reaching Cloudflare must be a valid JPEG within the limit.
     const uploadedFile = form.get("input_image_0") as File;
     assert.equal(uploadedFile.type, "image/jpeg");
     const uploadedBytes = Buffer.from(await uploadedFile.arrayBuffer());
-    assert.deepEqual(uploadedBytes, REFERENCE_BYTES);
+    const meta = await sharp(uploadedBytes).metadata();
+    assert.equal(meta.format, "jpeg");
+    assert.ok((meta.width ?? 0) <= MAX_REFERENCE_DIMENSION, "width within reference limit");
+    assert.ok((meta.height ?? 0) <= MAX_REFERENCE_DIMENSION, "height within reference limit");
   } finally {
     globalThis.fetch = originalFetch;
     delete process.env.CLOUDFLARE_ACCOUNT_ID;
