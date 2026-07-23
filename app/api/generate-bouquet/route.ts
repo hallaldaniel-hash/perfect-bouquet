@@ -141,7 +141,12 @@ export async function POST(request: NextRequest) {
     form.append("width", "1024");
     form.append("height", "1024");
     form.append("steps", "8");
-    form.append("input_image", new Blob([referenceBytes], { type: "image/jpeg" }), "bouquet-blueprint.jpg");
+    // Cloudflare requires the reference image field to be named EXACTLY
+    // input_image_0 (through input_image_3 for up to 4 references) — a
+    // differently-named field is not recognized as a reference image at all,
+    // which silently turns this into a text-to-image-only request.
+    // https://developers.cloudflare.com/changelog/post/2025-11-25-flux-2-dev-workers-ai/
+    form.append("input_image_0", new Blob([referenceBytes], { type: "image/jpeg" }), "bouquet-blueprint.jpg");
 
     const cloudflareResponse = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/black-forest-labs/flux-2-dev`,
