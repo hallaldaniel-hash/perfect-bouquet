@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { flowerCatalog } from "@/prisma/flowerData";
 import { ReferenceImageError } from "@/lib/referenceImages";
 import { assembleReferenceSet } from "@/lib/bouquetReferences";
+import { buildBouquetPrompt } from "@/lib/bouquetPrompt";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -86,57 +87,6 @@ export async function POST(request: NextRequest) {
 
   recentRequests.set(visitor, now);
 
-  const allocation = flowers.map((flower, index) => ({
-    flower,
-    count: Math.floor(count / flowers.length) + (index < count % flowers.length ? 1 : 0),
-  }));
-  const forbiddenFlowers = [...ALLOWED_FLOWERS].filter((flower) => !flowers.includes(flower));
-  const wrapLayers = wraps.length === 1
-    ? { outer: wraps[0], inner: wraps[0] }
-    : { outer: wraps[1], inner: wraps[0] };
-
-  const specification = {
-    task: "Transform the supplied bouquet blueprint into one photorealistic florist product photograph. The reference image is a binding composition and color guide, not optional inspiration.",
-    bouquet_inventory: {
-      exact_total_visible_flower_units: count,
-      exact_required_units: allocation,
-      forbidden_flower_varieties: forbiddenFlowers,
-      inventory_rule: "Use every required variety and no forbidden variety. Do not substitute common roses or peonies for another named variety. A delphinium, sweet pea, orchid, or baby's-breath unit may be a single flowering stem or cluster, exactly as depicted in the reference.",
-    },
-    bouquet_scale: {
-      size: count <= 9 ? "small hand-tied bouquet" : count <= 19 ? "medium hand-tied bouquet" : "full but controlled hand-tied bouquet",
-      rule: "Do not exaggerate the size, density, number of petals, or number of flowers. Leave visible breathing room between flower units. This is not an enormous bridal bouquet.",
-    },
-    wrapping: {
-      inner_visible_layer: `${wrapLayers.inner} (${WRAP_COLORS[wrapLayers.inner]}) matching the inner wrap color in the reference`,
-      outer_visible_layer: `${wrapLayers.outer} (${WRAP_COLORS[wrapLayers.outer]}) matching the outer wrap color in the reference`,
-      rule: wraps.length === 2
-        ? "Show two clearly distinct paper layers. Do not recolor, blend, replace, omit, or turn either wrapping color into a flower color."
-        : "Use exactly one wrapping color. Do not introduce another colored wrapping layer.",
-      ribbon: "one narrow ivory silk ribbon only",
-    },
-    visual_style: {
-      medium: "high-end photorealistic florist product photography",
-      composition: "one centered bouquet, full bouquet and wrapping visible, matching the supplied blueprint silhouette",
-      background: "plain warm cream seamless studio background",
-      lighting: "soft natural window light, realistic shadows, true botanical texture",
-      framing: "vertical square crop with comfortable empty space around the bouquet",
-    },
-    absolute_prohibitions: [
-      "no additional flowers",
-      "no invented filler flowers",
-      "no substitutions",
-      "no oversized or overflowing bouquet",
-      "no vase",
-      "no hands or people",
-      "no text, labels, letters, logos, or watermark",
-      "no objects besides the bouquet, wrap, stems, minimal green foliage, and ribbon",
-    ],
-    final_check: `Before rendering, verify the inventory sums to exactly ${count}, every listed flower appears in its assigned quantity, every forbidden flower is absent, and the wrapping has the specified color layer or layers. Accuracy is more important than abundance.`,
-  };
-
-  const prompt = `STRICT REFERENCE-BASED IMAGE EDIT. Preserve the exact restrained bouquet blueprint and obey this JSON production specification:\n${JSON.stringify(specification)}`;
-
   let referenceSet;
   try {
     // input_image_0 is the normalised blueprint; input_image_1.. are the
@@ -157,6 +107,16 @@ export async function POST(request: NextRequest) {
     }
     throw error;
   }
+
+  // The prompt is built from the SAME reference roles that were just assembled,
+  // so every "Image N is ..." line matches the image actually attached below.
+  const { prompt } = buildBouquetPrompt({
+    stemCount: count,
+    selectedFlowers: flowers,
+    selectedWraps: wraps,
+    wrapColors: WRAP_COLORS,
+    roles: referenceSet.roles,
+  });
 
   try {
     const form = new FormData();
