@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { flowerCatalog } from "@/prisma/flowerData";
-import { normalizeReferenceImage, ReferenceImageError } from "@/lib/referenceImages";
+import { ReferenceImageError } from "@/lib/referenceImages";
+import { assembleReferenceSet } from "@/lib/bouquetReferences";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -136,12 +137,17 @@ export async function POST(request: NextRequest) {
 
   const prompt = `STRICT REFERENCE-BASED IMAGE EDIT. Preserve the exact restrained bouquet blueprint and obey this JSON production specification:\n${JSON.stringify(specification)}`;
 
-  let blueprint;
+  let referenceSet;
   try {
-    // Defense in depth: normalise the blueprint server-side so an out-of-spec
-    // reference (wrong format, mis-oriented, or over Cloudflare's sub-512 limit)
-    // can never reach the model and silently drop image conditioning.
-    blueprint = await normalizeReferenceImage(referenceBytes);
+    // input_image_0 is the normalised blueprint; input_image_1.. are the
+    // selected flowers' catalog images (one each, or a single board for >3
+    // varieties). All are resolved from trusted catalog slugs and normalised
+    // within Cloudflare's sub-512 limit. A bad blueprint throws here (-> 400);
+    // a bad flower image degrades to blueprint-only without failing the request.
+    referenceSet = await assembleReferenceSet({
+      blueprintBytes: referenceBytes,
+      selectedFlowers: flowers,
+    });
   } catch (error) {
     if (error instanceof ReferenceImageError) {
       return NextResponse.json(
@@ -158,12 +164,19 @@ export async function POST(request: NextRequest) {
     form.append("width", "1024");
     form.append("height", "1024");
     form.append("steps", "8");
-    // Cloudflare requires the reference image field to be named EXACTLY
-    // input_image_0 (through input_image_3 for up to 4 references) — a
-    // differently-named field is not recognized as a reference image at all,
-    // which silently turns this into a text-to-image-only request.
+    // Cloudflare requires each reference image field to be named EXACTLY
+    // input_image_0 through input_image_3 (up to 4 references) — a differently
+    // named field is not recognized as a reference image at all, which silently
+    // turns this into a text-to-image-only request. input_image_0 is the
+    // blueprint; the rest are flower identity references.
     // https://developers.cloudflare.com/changelog/post/2025-11-25-flux-2-dev-workers-ai/
-    form.append("input_image_0", new Blob([new Uint8Array(blueprint.bytes)], { type: "image/jpeg" }), "bouquet-blueprint.jpg");
+    for (const image of referenceSet.images) {
+      form.append(
+        image.field,
+        new Blob([new Uint8Array(image.bytes)], { type: "image/jpeg" }),
+        image.filename,
+      );
+    }
 
     const cloudflareResponse = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/black-forest-labs/flux-2-dev`,
